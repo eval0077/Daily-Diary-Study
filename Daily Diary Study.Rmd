@@ -1,0 +1,129 @@
+---
+title: "Daily Diary Study 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading libraries
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+library(readr)
+library(tidyverse)
+#library(effects)       # for probing interactions
+library(ggplot2)       # for data visualization
+library(interactions)  # for probing/plotting interactions
+library(lme4)          # for multilevel models
+install.packages('lmerTest')
+install.packages('psych')
+library(lmerTest)      # for p-values
+library(psych)         # for describing the data
+library(plyr)          # for data manipulation
+```
+
+## Loading datasets
+
+```{r}
+Day_1 <- read_csv("~/Desktop/Day 1.csv")
+Day_2 <- read_csv("~/Desktop/Day 2.csv")
+Day_3 <- read_csv("~/Desktop/Day 3.csv")
+Day_4 <- read_csv("~/Desktop/Day 4.csv")
+Day_5 <- read_csv("~/Desktop/Day 5.csv")
+Day_6 <- read_csv("~/Desktop/Day 6.csv")
+Day_7 <- read_csv("~/Desktop/Day 7.csv")
+```
+
+## Data cleaning and merging
+
+```{r}
+Day_1 <- Day_1[-c(1:7),]
+Day_2 <- Day_2[-c(1:3),]
+Day_3 <- Day_2[-c(1,2),]
+Day_4 <- Day_2[-c(1,2),]
+Day_5 <- Day_2[-c(1,2),]
+Day_6 <- Day_2[-c(1,2),]
+Day_7 <- Day_2[-c(1,2),]
+Day_1 <- Day_1 %>% filter(Finished == '1')
+Day_2 <- Day_2 %>% filter(Finished == '1')
+Day_3 <- Day_3 %>% filter(Finished == '1')
+Day_4 <- Day_4 %>% filter(Finished == '1')
+Day_5 <- Day_5 %>% filter(Finished == '1')
+Day_6 <- Day_6 %>% filter(Finished == '1')
+Day_7 <- Day_7 %>% filter(Finished == '1')
+Day_1 <- cbind(Day_1, Day= '1')
+Day_2 <- cbind(Day_2, Day= '2')
+Day_3 <- cbind(Day_3, Day= '3')
+Day_4 <- cbind(Day_4, Day= '4')
+Day_5 <- cbind(Day_5, Day= '5')
+Day_6 <- cbind(Day_6, Day= '6')
+Day_7 <- cbind(Day_7, Day= '7')
+#merge datasets,extract person_level data, create time_varying data,remerge datasets and change data types
+person_level_data <- Day_1 %>% select(, c('QID22':'QID41','QID82'))
+Day_1_2 <- Day_1 %>% select(,-c('QID22':'QID41','Q76'))
+Daily_total <- rbind(Day_1_2,Day_2,Day_3,Day_4,Day_5,Day_6,Day_7)
+#Dat <- Daily_total %>% group_by(QID82) %>% count()
+#ppl_delete <- Dat %>% filter(n != 7) 
+#time_varying_data <- Daily_total[!Daily_total$QID82 %in% ppl_delete$QID82,]
+#time_varying_data %>% group_by(QID82) %>% count()
+#time_varying_data[order(time_varying_data$QID82,time_varying_data$Day),]
+Merged_data <- merge(person_level_data,Daily_total, by='QID82')
+i <- c(2:102,104:180)
+Merged_data[,i] <- apply(Merged_data[,i],2,function(x) as.numeric(as.character(x)))
+str(Merged_data)
+Merged_data$QID82 <- as.factor(Merged_data$QID82)
+```
+
+## Variable coding for the pre-diary
+
+```{r}
+#Big-five personality inventory
+
+#emotion_belief_scale
+Merged_data$Neg_Control <- sum(Merged_data$QID35_1,Merged_data$QID35_5,Merged_data$QID35_9,Merged_data$QID35_13)
+Merged_data$Pos_Control <- sum(Merged_data$QID35_2,Merged_data$QID35_6,Merged_data$QID35_10,Merged_data$QID35_14)
+Merged_data$Neg_Useful <- sum(Merged_data$QID35_3,Merged_data$QID35_7,Merged_data$QID35_11,Merged_data$QID35_15)
+Merged_data$Pos_Useful <- sum(Merged_data$QID35_4,Merged_data$QID35_8,Merged_data$QID35_12,Merged_data$QID35_16)
+Merged_data$General_Control <- sum(Merged_data$Neg_Control,Merged_data$Pos_Control)
+Merged_data$General_Useful <- sum(Merged_data$Neg_Useful,Merged_data$Pos_Useful)
+Merged_data$General_Total <- sum(Merged_data$General_Control,Merged_data$General_Useful)
+#individualism-collectivism scale
+Merged_data$VC_sum <- sum(Merged_data$VC_1,Merged_data$VC_2,Merged_data$VC_3,Merged_data$VC_3_1)
+Merged_data$HC_sum <- sum(Merged_data$HC_1,Merged_data$HC_2,Merged_data$HC_3,Merged_data$HC_3_1)
+Merged_data$VI_sum <- sum(Merged_data$VI_1,Merged_data$VI_2,Merged_data$VI_3,Merged_data$VI_3_1)
+Merged_data$HI_sum <- sum(Merged_data$HI_1,Merged_data$HI_2,Merged_data$HI_3,Merged_data$HI_3_1)
+#UCLA loneliness_scale
+ #reverse code items and change column names
+Merged_data$loneliness_1<-recode(Merged_data$loneliness_2,'1'='4','2'='3','3'='2','4'='1') %>% as.numeric()
+Merged_data$loneliness_2<-Merged_data$loneliness_3 %>% as.numeric()
+Merged_data$loneliness_3<-Merged_data$loneliness_4 %>% as.numeric()
+Merged_data$loneliness_4<-Merged_data$loneliness_5 %>% as.numeric()
+Merged_data$loneliness_5<-recode(Merged_data$loneliness_6,'1'='4','2'='3','3'='2','4'='1') %>% as.numeric()
+Merged_data$loneliness_6<-recode(Merged_data$loneliness_7,'1'='4','2'='3','3'='2','4'='1') %>% as.numeric()
+Merged_data$loneliness_7<-Merged_data$loneliness_8 %>% as.numeric()
+Merged_data$loneliness_8<-Merged_data$loneliness_9 %>% as.numeric()
+Merged_data$loneliness_9<-recode(Merged_data$loneliness_10,'1'='4','2'='3','3'='2','4'='1') %>% as.numeric()
+Merged_data$loneliness_10<-recode(Merged_data$loneliness_11,'1'='4','2'='3','3'='2','4'='1') %>% as.numeric()
+Merged_data$loneliness_11<-Merged_data$loneliness_12 %>% as.numeric()
+Merged_data$loneliness_12<-Merged_data$loneliness_13 %>% as.numeric()
+Merged_data$loneliness_13<-Merged_data$loneliness_14 %>% as.numeric()
+Merged_data$loneliness_14<-Merged_data$loneliness_15 %>% as.numeric()
+Merged_data$loneliness_15<-recode(Merged_data$loneliness_16,'1'='4','2'='3','3'='2','4'='1') %>% as.numeric()
+Merged_data$loneliness_16<-recode(Merged_data$loneliness_17,'1'='4','2'='3','3'='2','4'='1') %>% as.numeric()
+Merged_data$loneliness_17<-Merged_data$loneliness_18 %>% as.numeric()
+Merged_data$loneliness_18<-Merged_data$loneliness_19 %>% as.numeric()
+Merged_data$loneliness_19<-recode(Merged_data$loneliness_20,'1'='4','2'='3','3'='2','4'='1') %>% as.numeric()
+Merged_data$loneliness_20<-recode(Merged_data$Q61_20,'1'='4','2'='3','3'='2','4'='1') %>% as.numeric()
+Merged_data$loneliness_sum <- sum(Merged_data$loneliness_1,Merged_data$loneliness_2,Merged_data$loneliness_3,Merged_data$loneliness_4,Merged_data$loneliness_5,Merged_data$loneliness_6,Merged_data$loneliness_7,Merged_data$loneliness_8,Merged_data$loneliness_9,Merged_data$loneliness_10,Merged_data$loneliness_11,Merged_data$loneliness_12,Merged_data$loneliness_13,Merged_data$loneliness_14,Merged_data$loneliness_15,Merged_data$loneliness_16,Merged_data$loneliness_17,Merged_data$loneliness_18,Merged_data$loneliness_19,Merged_data$loneliness20)
+
+```
+
+## Variables coding for daily-diary
+
+
+## Multilevel modeling
